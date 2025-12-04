@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maya Appointment Portal</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Custom Animation */
+        @keyframes slideUpFade {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-entry {
+            animation: slideUpFade 0.6s ease-out forwards;
+        }
+
+        /* Custom styles for date input icon alignment */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            opacity: 0.6;
+            filter: invert(1); /* Invert icon for dark theme match if needed, here keeping standard */
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-6">
+
+    <!-- Main Container with Animation -->
+    <div id="main-container" class="w-full max-w-lg animate-entry opacity-0">
+        
+        <!-- Card -->
+        <div class="bg-white shadow-2xl rounded-2xl p-8 border border-gray-100">
+            
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <!-- Added 'uppercase' class for capitalization -->
+                <h1 class="text-2xl sm:text-3xl font-bold mb-2 text-gray-900 tracking-tight uppercase leading-snug">
+                    Maya ki nagari me aapka swagat hai ✨
+                </h1>
+                <p class="text-gray-500 text-sm">
+                    "BOOK Your Appointment." <br>
+                    <span class="text-xs text-gray-400 uppercase tracking-widest font-semibold">Strictly Professional (Mostly)</span>
+                </p>
+            </div>
+
+            <!-- Date Picker Section -->
+            <div class="mb-5">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Select Date</label>
+                <div class="relative flex items-center group">
+                    <input 
+                        type="date" 
+                        id="date-input"
+                        class="w-full bg-gray-50 border-2 border-gray-100 p-4 rounded-xl font-medium text-gray-800 focus:outline-none focus:border-black focus:bg-white transition-all duration-300"
+                    >
+                    <div class="absolute right-4 pointer-events-none text-gray-400 group-hover:text-black transition-colors">
+                        <i class="far fa-calendar-alt text-lg"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Time Slot Section -->
+            <div class="mb-8">
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Choose Time Slot</label>
+                <div class="grid grid-cols-2 gap-3" id="slots-container">
+                    <!-- Slots will be injected here by JS -->
+                </div>
+            </div>
+
+            <!-- Confirm Button -->
+            <button 
+                id="book-btn"
+                disabled
+                class="w-full py-4 rounded-xl text-lg font-semibold text-white transition-all duration-300
+                       disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed
+                       bg-black hover:bg-gray-800 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+            >
+                Book Your Appointment
+            </button>
+
+            <!-- Footer Note Removed as requested -->
+
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="success-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-2xl p-8 max-w-sm w-full text-center mx-4 shadow-2xl transform transition-all">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-check text-2xl text-green-600"></i>
+            </div>
+            <h2 class="text-2xl font-bold mb-2 text-gray-900">Application Sent</h2>
+            <p class="text-gray-600 mb-6 text-sm leading-relaxed">
+                Maya has received your request.<br>
+                <span id="modal-reason-text" class="font-semibold text-black mt-2 block"></span>
+            </p>
+            <button onclick="resetForm()" class="bg-black text-white font-medium px-6 py-3 rounded-xl hover:bg-gray-800 w-full transition-colors">
+                Close & Wait
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Data
+        const slots = ["10:00 AM", "12:00 PM", "3:00 PM", "6:00 PM", "9:00 PM"];
+        
+        // State variables
+        let selectedDate = "";
+        let selectedSlot = "";
+
+        // DOM Elements
+        const dateInput = document.getElementById('date-input');
+        const slotsContainer = document.getElementById('slots-container');
+        const bookBtn = document.getElementById('book-btn');
+        const successModal = document.getElementById('success-modal');
+        const modalReasonText = document.getElementById('modal-reason-text');
+
+        // Set min date to today
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.setAttribute('min', today);
+
+        // Initialize Slots
+        function initSlots() {
+            slotsContainer.innerHTML = '';
+            slots.forEach(slot => {
+                const btn = document.createElement('button');
+                btn.textContent = slot;
+                // Base classes
+                const isSelected = selectedSlot === slot;
+                btn.className = `py-3 px-4 rounded-xl border-2 transition-all duration-200 text-sm font-medium
+                    ${isSelected 
+                        ? 'bg-black text-white border-black shadow-lg' 
+                        : 'bg-white text-gray-600 border-gray-100 hover:border-gray-300 hover:bg-gray-50'}`;
+                
+                btn.onclick = () => {
+                    selectedSlot = slot;
+                    initSlots(); // Re-render to update styling
+                    checkValidity();
+                };
+                slotsContainer.appendChild(btn);
+            });
+        }
+
+        // Event Listeners
+        dateInput.addEventListener('change', (e) => {
+            selectedDate = e.target.value;
+            checkValidity();
+        });
+
+        // Check if form is valid
+        function checkValidity() {
+            if (selectedDate && selectedSlot) {
+                bookBtn.disabled = false;
+            } else {
+                bookBtn.disabled = true;
+            }
+        }
+
+        // Handle Booking
+        bookBtn.addEventListener('click', () => {
+            if (!selectedDate || !selectedSlot) return;
+            
+            // Logic for modal text (Generic now since reason is removed)
+            let msg = "Standard processing time: 3-5 business days.";
+            
+            modalReasonText.textContent = msg;
+            successModal.classList.remove('hidden');
+        });
+
+        // Reset Form
+        function resetForm() {
+            successModal.classList.add('hidden');
+            selectedDate = "";
+            selectedSlot = "";
+            
+            dateInput.value = "";
+            
+            initSlots();
+            checkValidity();
+        }
+
+        // Initial render
+        initSlots();
+
+    </script>
+</body>
+</html>
